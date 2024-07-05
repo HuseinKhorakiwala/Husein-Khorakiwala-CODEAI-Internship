@@ -1,0 +1,86 @@
+import pandas as pd
+from wordcloud import WordCloud, STOPWORDS
+import datetime
+import matplotlib.pyplot as plt
+from collections import defaultdict
+def weekDay(dataframe) -> str:
+    weeks = []
+    memo={1:'Monday',2:'Tuesday',3:'Wednesday',4:'Thursday',5:'Friday',6:'Saturday',7:'Sunday'}
+    for i in dataframe:
+        day,month,year = [int(j) for j in i.split('-')]
+        week = datetime.datetime(year,month,day).isoweekday()
+        weeks.append(week)
+    return weeks
+df = pd.read_csv('data.csv').sample(frac=1)
+df['week'] = pd.DataFrame(weekDay(df['Date']))
+df['msg'] = df['msg'].str.replace('*','')
+df.drop(columns=['Unnamed: 5', 'Unnamed: 6','Unnamed: 7'],inplace=True)
+df = df[~(df['msg'].str.contains('http'))]
+
+df
+Date	time	hour	who	msg	week
+34	02-04-2024	12	40 pm	+91 81697 56284	A2 batch students plz come for SBL practical ...	4
+494	29-03-2024	7	54 pm	+91 99871 01492	Dear students	5
+506	29-04-2024	8	31 pm	+91 98670 09240	Dear students those is having DBMS practical ...	5
+82	03-07-2024	10	05 am	+91 95940 60927	Exam has been started	3
+78	03-05-2024	3	42 pm	+91 98670 09240	Madam following SY students have not complete...	6
+...	...	...	...	...	...	...
+69	03-04-2024	3	21 pm	+91 91369 12677	Dear students we are compiling the final atte...	7
+452	26-04-2024	10	31 pm	+91 98670 09240	Dear students who stay nearby this location c...	6
+126	05-02-2024	1	27 pm	+91 82081 73068	Why not you are coming for tutorial?	6
+350	21-02-2024	10	39 am	+91 91369 12677	Interested students pls fill it	1
+179	08-02-2024	1	41 pm	+91 98678 06689	Dear students	5
+499 rows × 6 columns
+
+most_busy_day = df.groupby(by=['week'],as_index=False)['msg'].count().rename(columns={'msg':'Total Messages'}).sort_values('week').replace([i for i in range(1,8)],['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'])
+
+fig,ax=plt.subplots()
+
+ax.bar(['Monday','Tuesday','Wednes\nday','Thursday','Friday','Saturday','Sunday'],most_busy_day['Total Messages'],width=0.5,label='Total messages')
+ax.set_title('Most Busy Week-Day')
+ax.legend()
+<matplotlib.legend.Legend at 0x27331c735b0>
+
+most_msg = df.groupby(by=['who'],as_index=False)['msg'].count().rename(columns={'msg':'Total Messages'}).sort_values('Total Messages',ascending=False).head(3)
+
+fig,ax=plt.subplots()
+
+ax.bar(most_msg['who'],most_msg['Total Messages'],width=0.5,label='Total messages')
+ax.set_title('Top 3 Most Busy User')
+ax.legend()
+<matplotlib.legend.Legend at 0x27334e7d8e0>
+
+comment_words = ''
+stopwords = set(STOPWORDS)
+memo = defaultdict(int)
+
+for val in df['msg']:
+    
+    tokens = str(val).split()
+     
+    for i in range(len(tokens)):
+        tokens[i] = tokens[i].lower()
+        memo[tokens[i]] += 1
+        
+    comment_words += " ".join(tokens)+" "
+ 
+wordcloud = WordCloud(width = 800, height = 800,
+                background_color ='white',
+                stopwords = stopwords,
+                min_font_size = 10).generate(comment_words)
+ 
+                       
+plt.figure(figsize = (8, 8), facecolor = None)
+plt.imshow(wordcloud)
+plt.axis("off")
+plt.tight_layout(pad = 0)
+plt.show()
+
+most_freq = {i:memo[i] for i in sorted(memo,key=lambda x:memo[x],reverse=True)[:3]}
+
+fig,ax=plt.subplots()
+
+ax.bar(most_freq.keys(),most_freq.values(),width=0.5,label='Total Frequency')
+ax.set_title('3 Most Frequent words')
+ax.legend()
+<matplotlib.legend.Legend at 0x27333cd1f70>
